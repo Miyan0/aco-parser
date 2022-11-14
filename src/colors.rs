@@ -57,7 +57,6 @@ impl RawColorV1 {
             "{:04x}{:04x}{:04x}",
             self.component_1, self.component_2, self.component_3
         )
-        .to_uppercase()
     }
 
     fn to_hsb(&self) -> String {
@@ -68,10 +67,9 @@ impl RawColorV1 {
             "{:04x}{:04x}{:04x}{:04x}",
             self.component_1, self.component_2, self.component_3, self.component_4
         )
-        .to_uppercase()
     }
     fn to_grayscale(&self) -> String {
-        format!("{:04x}", self.component_1).to_uppercase()
+        format!("{:04x}", self.component_1)
     }
 
     fn to_hex(&self) -> String {
@@ -112,7 +110,6 @@ impl RawColorV2 {
             "{:04x}{:04x}{:04x}",
             self.component_1, self.component_2, self.component_3
         )
-        .to_uppercase()
     }
 
     pub fn to_8bit_rgb(&self) -> String {
@@ -136,11 +133,10 @@ impl RawColorV2 {
             "{:04x}{:04x}{:04x}{:04x}",
             self.component_1, self.component_2, self.component_3, self.component_4
         )
-        .to_uppercase()
     }
 
     fn to_grayscale(&self) -> String {
-        format!("{:04x}", self.component_1).to_uppercase()
+        format!("{:04x}", self.component_1)
     }
 
     pub fn to_hex(&self) -> String {

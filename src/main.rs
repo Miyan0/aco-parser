@@ -89,6 +89,7 @@ fn read_aco_file(path: PathBuf) -> (Vec<RawColorV1>, Vec<RawColorV2>) {
             component_4,
         });
     }
+
     (v1_vec, v2_vec)
 }
 
