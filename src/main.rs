@@ -39,7 +39,6 @@ struct Args {
 // in dev, to run with args ->
 //          cargo run -- --my_args myValue
 fn main() {
-    // params, input -> aco, output name, output type (css, scss, css variables)
     let args = Args::parse();
     let aco_path = build_path(&args.input_name);
     let output_filename: &str;
@@ -50,7 +49,6 @@ fn main() {
     } else {
         output_filename = &args.output_name;
     }
-    // println!("{}", args.output_name)
     run(&aco_path, &output_filename);
 }
 
