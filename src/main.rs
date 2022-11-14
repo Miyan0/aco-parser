@@ -1,27 +1,57 @@
 use std::{
     env,
-    fs::File,
+    fs::{self, File},
     io::Write,
     path::{Path, PathBuf},
 };
+
+use clap::Parser;
 
 use parser::parse_aco;
 
 mod colors;
 mod parser;
 
+const DEFAULT_OUTPUT_FILE_NAME: &str = "default";
+
+// ---------------------------------------------------------------
+// CLI Args
+// ---------------------------------------------------------------
+
+/// Adobe color swatch parser. Converts one '.aco' file to
+/// css, scss and css variable files. Converted files are
+/// exported to a directory named 'output'.
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// Location of the .aco file
+    #[arg(short, long)]
+    input_name: String,
+
+    /// name of the css output file
+    #[arg(short, long, default_value_t = (DEFAULT_OUTPUT_FILE_NAME.to_string()))]
+    output_name: String,
+}
+
 // ---------------------------------------------------------------
 // entry point
 // ---------------------------------------------------------------
-
+// in dev, to run with args ->
+//          cargo run -- --my_args myValue
 fn main() {
-    let filename = "test.aco";
-    // let output_name = "test.css";
-    let aco_path = build_path(filename);
-    // let out_path = build_path(output_name);
-    run(&aco_path);
-    let args: Vec<_> = std::env::args().collect(); // get all arguements passed to app
-    println!("{:?}", args);
+    // params, input -> aco, output name, output type (css, scss, css variables)
+    let args = Args::parse();
+    let aco_path = build_path(&args.input_name);
+    let output_filename: &str;
+
+    if args.output_name == DEFAULT_OUTPUT_FILE_NAME {
+        println!("using default output name");
+        output_filename = aco_path.file_stem().unwrap().to_str().unwrap();
+    } else {
+        output_filename = &args.output_name;
+    }
+    // println!("{}", args.output_name)
+    run(&aco_path, &output_filename);
 }
 
 // ---------------------------------------------------------------
@@ -31,7 +61,7 @@ fn main() {
 /// Build a path in current directory
 fn build_path(filename: &str) -> PathBuf {
     let current_dir = env::current_dir().unwrap();
-    let result = Path::new(&current_dir).join("data").join(filename);
+    let result = Path::new(&current_dir).join(filename);
     if !result.exists() {
         panic!("Could not create path")
     }
@@ -43,13 +73,19 @@ fn build_path(filename: &str) -> PathBuf {
 // ---------------------------------------------------------------
 fn export_to_file(filename: &str, data: &str) -> std::io::Result<()> {
     let current_dir = env::current_dir().unwrap();
-    let path = Path::new(&current_dir).join("data").join(filename);
+    let output_dir = "output";
+    let out_path = Path::new(&current_dir).join(output_dir);
+    if !out_path.exists() {
+        fs::create_dir_all(&out_path)?;
+    }
+
+    let path = out_path.join(filename);
     let mut file = File::create(path).unwrap();
     write!(file, "{}", data)
 }
 
 /// execute cli
-fn run(aco_path: &PathBuf) {
+fn run(aco_path: &PathBuf, output_filename: &str) {
     let hex_colors = parse_aco(&aco_path);
     let mut css = String::new();
     let mut scss = String::new();
@@ -66,15 +102,13 @@ fn run(aco_path: &PathBuf) {
         let c_css_vars = format!("{}\n", item.to_css_variables());
         css_vars.push_str(&c_css_vars);
     }
-    export_to_file("export.css", &css).expect("Could not export file");
-    export_to_file("export.scss", &scss).expect("Could not export file");
+    let css_filename = format!("{}.css", output_filename);
+    let scss_filename = format!("{}.scss", output_filename);
+    let css_vars_filename = format!("{}-vars.css", output_filename);
+
+    export_to_file(&css_filename, &css).expect("Could not export file");
+    export_to_file(&scss_filename, &scss).expect("Could not export file");
 
     css_vars.push_str("\n}");
-    export_to_file("export_vars.css", &css_vars).expect("Could not export file");
-
-    // dbg!(&result);
-    // match result.last() {
-    //     None => println!("result is empty"),
-    //     Some(c) => println!("colors: {}", c.to_web_colors()),
-    // };
+    export_to_file(&css_vars_filename, &css_vars).expect("Could not export file");
 }

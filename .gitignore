@@ -3,3 +3,4 @@
 .vscode/
 examples.rs
 export*.*
+output/
