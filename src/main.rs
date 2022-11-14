@@ -11,90 +11,78 @@ use colors::RawColorV2;
 
 mod colors;
 
+// ---------------------------------------------------------------
+// read 2 bytes
+// ---------------------------------------------------------------
+
+fn read_u16(reader: &mut BufReader<File>) -> u16 {
+    let mut buffer_u16 = [0u8; std::mem::size_of::<u16>()];
+    reader.read_exact(&mut buffer_u16).expect("read error");
+    u16::from_be_bytes(buffer_u16)
+}
+
+// ---------------------------------------------------------------
+// read swatch name
+// ---------------------------------------------------------------
+
+fn read_swatch_name(reader: &mut BufReader<File>) -> String {
+    let mut buffer_u32 = [0u8; std::mem::size_of::<u32>()];
+    reader.read_exact(&mut buffer_u32).expect("read error");
+    let name_length = u32::from_be_bytes(buffer_u32);
+    let len = name_length * 2;
+
+    let mut str_buffer = vec![0u8; len as usize];
+    reader.read_exact(&mut str_buffer).expect("read error here");
+
+    let name = str::from_utf8(&str_buffer).unwrap();
+    name.to_string().replace("\0", "")
+}
+
+// ---------------------------------------------------------------
+// read aco file
+// ---------------------------------------------------------------
+
 fn read_aco_file(path: PathBuf) -> (Vec<RawColorV1>, Vec<RawColorV2>) {
     let mut input = BufReader::new(File::open(path).expect("Failed to open file"));
-    let mut buffer_u16 = [0u8; std::mem::size_of::<u16>()];
 
-    input.read_exact(&mut buffer_u16).expect("read error");
-    let mut version_byte = u16::from_be_bytes(buffer_u16);
+    let mut version_byte = read_u16(&mut input);
     if version_byte != 1 {
         panic!("Version byte should be 1")
     }
-
-    input.read_exact(&mut buffer_u16).expect("read error");
-    let mut color_count = u16::from_be_bytes(buffer_u16);
-    if color_count != 7 {
-        panic!("Color count should be 7 in our test file")
-    }
-
+    let mut color_count = read_u16(&mut input);
     let mut v1_vec = Vec::new();
-    let mut v2_vec = Vec::new();
-
-    for idx in 1..=color_count {
-        input.read_exact(&mut buffer_u16).expect("read error");
-        let color_space = ColorSpace::from_u16(u16::from_be_bytes(buffer_u16));
-
-        input.read_exact(&mut buffer_u16).expect("read error");
-        let component_1 = u16::from_be_bytes(buffer_u16);
-
-        input.read_exact(&mut buffer_u16).expect("read error");
-        let component_2 = u16::from_be_bytes(buffer_u16);
-
-        input.read_exact(&mut buffer_u16).expect("read error");
-        let component_3 = u16::from_be_bytes(buffer_u16);
-
-        input.read_exact(&mut buffer_u16).expect("read error");
-        let component_4 = u16::from_be_bytes(buffer_u16);
-
+    for _ in 1..=color_count {
+        let color_space = read_u16(&mut input);
+        let component_1 = read_u16(&mut input);
+        let component_2 = read_u16(&mut input);
+        let component_3 = read_u16(&mut input);
+        let component_4 = read_u16(&mut input);
         v1_vec.push(RawColorV1 {
-            color_space,
+            color_space: ColorSpace::from_u16(color_space),
             component_1,
             component_2,
             component_3,
             component_4,
         });
-        // dbg!(raw_color);
     }
 
     // version 2
-    input.read_exact(&mut buffer_u16).expect("read error");
-    version_byte = u16::from_be_bytes(buffer_u16);
+    version_byte = read_u16(&mut input);
     if version_byte != 2 {
         panic!("Version byte should be 2 but was {}", version_byte)
     }
-
-    input.read_exact(&mut buffer_u16).expect("read error");
-    color_count = u16::from_be_bytes(buffer_u16);
-
-    let mut buffer_u32 = [0u8; std::mem::size_of::<u32>()];
-    for idx in 1..=color_count {
-        input.read_exact(&mut buffer_u16).expect("read error");
-        let color_space = ColorSpace::from_u16(u16::from_be_bytes(buffer_u16));
-
-        input.read_exact(&mut buffer_u16).expect("read error");
-        let component_1 = u16::from_be_bytes(buffer_u16);
-
-        input.read_exact(&mut buffer_u16).expect("read error");
-        let component_2 = u16::from_be_bytes(buffer_u16);
-
-        input.read_exact(&mut buffer_u16).expect("read error");
-        let component_3 = u16::from_be_bytes(buffer_u16);
-
-        input.read_exact(&mut buffer_u16).expect("read error");
-        let component_4 = u16::from_be_bytes(buffer_u16);
-
-        input.read_exact(&mut buffer_u32).expect("read error");
-        let name_length = u32::from_be_bytes(buffer_u32);
-        let len = name_length * 2;
-
-        let mut str_buffer = vec![0u8; len as usize];
-        input.read_exact(&mut str_buffer).expect("read error here");
-        let name = str::from_utf8(&str_buffer).unwrap();
-        // let name = str::from_utf8(&str_buffer).unwrap();
-
+    color_count = read_u16(&mut input);
+    let mut v2_vec = Vec::new();
+    for _ in 1..=color_count {
+        let color_space = read_u16(&mut input);
+        let component_1 = read_u16(&mut input);
+        let component_2 = read_u16(&mut input);
+        let component_3 = read_u16(&mut input);
+        let component_4 = read_u16(&mut input);
+        let name = read_swatch_name(&mut input);
         v2_vec.push(RawColorV2 {
-            name: name.to_string().replace("\0", ""),
-            color_space,
+            name,
+            color_space: ColorSpace::from_u16(color_space),
             component_1,
             component_2,
             component_3,
@@ -103,6 +91,10 @@ fn read_aco_file(path: PathBuf) -> (Vec<RawColorV1>, Vec<RawColorV2>) {
     }
     (v1_vec, v2_vec)
 }
+
+// ---------------------------------------------------------------
+// build path for aco file
+// ---------------------------------------------------------------
 
 fn build_path(filename: &str) -> PathBuf {
     let current_dir = env::current_dir().unwrap();
@@ -113,6 +105,10 @@ fn build_path(filename: &str) -> PathBuf {
     result
 }
 
+// ---------------------------------------------------------------
+// convert one raw color (v2) to css
+// ---------------------------------------------------------------
+
 fn to_css(color: &RawColorV2) -> String {
     let slug = color.name.replace(" ", "_").to_lowercase();
     format!(
@@ -122,12 +118,20 @@ fn to_css(color: &RawColorV2) -> String {
     )
 }
 
+// ---------------------------------------------------------------
+// export string to file
+// ---------------------------------------------------------------
+
 fn export_to_file(filename: &str, data: &str) -> std::io::Result<()> {
     let current_dir = env::current_dir().unwrap();
     let path = Path::new(&current_dir).join("data").join(filename);
     let mut file = File::create(path).unwrap();
     write!(file, "{}", data)
 }
+
+// ---------------------------------------------------------------
+// entry point
+// ---------------------------------------------------------------
 
 fn main() {
     let filename = "test.aco";
