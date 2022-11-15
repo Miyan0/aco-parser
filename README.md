@@ -4,6 +4,24 @@
 
 Reads an `.aco` file and exports it to web colors in these formats: (`css`, `scss` and `css-variable`)
 
+## Usage
+
+```bash
+aco-parser --input <myaco.aco>
+```
+
+Will parse `myaco.aco`, create a directory named `output` and generate:
+
+- myaco.css
+- myaco.scss
+- myaco-vars.css
+
+```bash
+aco-parser --input <myaco.aco> --output <my-output-name>
+```
+
+Will use `my-output-name` as prefix for the generated files.
+
 ## Background
 
 I'm doing web development and don't have any Adobe products (I use Affinity's). When I look for inspiration I often go to [Dribbble](https://dribbble.com/). Many designers on Dribbble include a color pallette in `.aco` format. Since this format is not supported by Affinity, I thought it could be fun to make a converter in **Rust**.
