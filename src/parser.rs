@@ -43,7 +43,7 @@ fn skip_u16(reader: &mut BufReader<File>) {
     _ = read_u16(reader);
 }
 
-/// Adbance the file reader cursor after adobe v1 stuff
+/// Advance the file reader cursor after adobe v1 stuff
 fn skip_v1(reader: &mut BufReader<File>) {
     let mut buffer = [0u8; V1_INFO_LEN];
     reader.read_exact(&mut buffer).expect("read error");
